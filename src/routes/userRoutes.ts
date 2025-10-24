@@ -1,24 +1,27 @@
 import { Router } from 'express';
-// Will import controllers when create
-// import { registerUser, loginUser, getUser, updateUser } from '../controllers/userController';
+import * as userController from '../controllers/userController';
+import { authenticate } from '../middleware/auth';
+import { validate } from '../middleware/validation';
+import { updateProfileValidation } from '../validators/authValidators';
 
 const router = Router();
 
-// User routes
-router.post('/register', (req, res) => {
-  res.status(200).json({ message: 'User registration endpoint' });
-});
+// All user routes require authentication
+router.use(authenticate);
 
-router.post('/login', (req, res) => {
-  res.status(200).json({ message: 'User login endpoint' });
-});
+// User profile routes
+router.get('/profile', userController.getUserGroups); // Get current user's groups
+router.put('/profile', validate(updateProfileValidation), userController.updateProfile);
+router.delete('/account', userController.deleteAccount);
 
-router.get('/profile', (req, res) => {
-  res.status(200).json({ message: 'User profile endpoint' });
-});
+// User-specific routes
+router.get('/:userId', userController.getUserById); // Get user by ID
+router.get('/groups', userController.getUserGroups); // Get user's groups
+router.get('/wallet', userController.getUserWallet); // Get user's wallet
 
-router.put('/profile', (req, res) => {
-  res.status(200).json({ message: 'Update user profile endpoint' });
-});
+// Notification routes
+router.get('/notifications', userController.getUserNotifications);
+router.put('/notifications/:notificationId/read', userController.markNotificationAsRead);
+router.put('/notifications/read-all', userController.markAllNotificationsAsRead);
 
 export default router;
