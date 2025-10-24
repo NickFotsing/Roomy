@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import * as authController from '../controllers/authController';
-import { authenticate } from '../middleware/auth';
-import { validate } from '../middleware/validation';
+import * as authController from '../controllers/authController.js';
+import { authenticate } from '../middleware/auth.js';
+import { validate } from '../middleware/validation.js';
 import {
   registerValidation,
   loginValidation,
@@ -9,7 +9,7 @@ import {
   forgotPasswordValidation,
   resetPasswordValidation,
   changePasswordValidation,
-} from '../validators/authValidators';
+} from '../validators/authValidators.js';
 
 const router = Router();
 

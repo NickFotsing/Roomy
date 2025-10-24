@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyAccessToken, JWTPayload } from '../utils/jwt';
-import { sendUnauthorized, sendForbidden } from '../utils/response';
+import { verifyAccessToken, JWTPayload } from '../utils/jwt.js';
+import { sendUnauthorized, sendForbidden } from '../utils/response.js';
 import { PrismaClient, MemberRole } from '@prisma/client';
 
 const prisma = new PrismaClient();

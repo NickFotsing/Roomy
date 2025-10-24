@@ -1,7 +1,7 @@
 import { PrismaClient, User } from '@prisma/client';
-import { hashPassword, comparePassword } from '../utils/password';
-import { generateTokenPair, generateRefreshToken, verifyRefreshToken, generateRandomToken, JWTPayload } from '../utils/jwt';
-import config from '../config/config';
+import { hashPassword, comparePassword } from '../utils/password.js';
+import { generateTokenPair, generateRefreshToken, verifyRefreshToken, generateRandomToken, JWTPayload } from '../utils/jwt.js';
+import config from '../config/config.js';
 
 const prisma = new PrismaClient();
 

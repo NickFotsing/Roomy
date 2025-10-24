@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, requireGroupMembership, requireGroupRole } from '../middleware/auth';
+import { authenticate, requireGroupMembership, requireGroupRole } from '../middleware/auth.js';
 import { MemberRole } from '@prisma/client';
 
 const router = Router();

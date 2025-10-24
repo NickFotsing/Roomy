@@ -3,13 +3,13 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
-import config from './config/config';
+import config from './config/config.js';
 
 // Import routes
-import authRoutes from './routes/authRoutes';
-import userRoutes from './routes/userRoutes';
-import groupRoutes from './routes/groupRoutes';
-import billRoutes from './routes/billRoutes';
+import authRoutes from './routes/authRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import groupRoutes from './routes/groupRoutes.js';
+import billRoutes from './routes/billRoutes.js';
 
 const app = express();
 

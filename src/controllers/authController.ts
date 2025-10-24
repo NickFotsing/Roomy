@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import * as authService from '../services/authService';
-import { sendSuccess, sendError, sendServerError } from '../utils/response';
+import * as authService from '../services/authService.js';
+import { sendSuccess, sendError, sendServerError } from '../utils/response.js';
 
 /**
  * Register a new user

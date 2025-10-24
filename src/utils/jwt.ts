@@ -1,5 +1,5 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
-import config from '../config/config';
+import config from '../config/config.js';
 import crypto from 'crypto';
 
 export interface JWTPayload {

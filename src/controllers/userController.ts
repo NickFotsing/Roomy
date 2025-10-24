@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { sendSuccess, sendError, sendServerError, sendNotFound } from '../utils/response';
+import { sendSuccess, sendError, sendServerError, sendNotFound } from '../utils/response.js';
 
 const prisma = new PrismaClient();
 
