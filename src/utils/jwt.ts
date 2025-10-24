@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import config from '../config/config';
 import crypto from 'crypto';
 
@@ -19,11 +19,12 @@ export interface TokenPair {
  * @returns The generated JWT access token
  */
 export const generateAccessToken = (payload: JWTPayload): string => {
-  return jwt.sign(payload, config.jwt.secret, {
-    expiresIn: config.jwt.accessExpiresIn,
+  const options: SignOptions = {
+    expiresIn: config.jwt.accessExpiresIn as unknown as number,
     issuer: 'roomy-api',
     audience: 'roomy-client',
-  });
+  };
+  return jwt.sign(payload, config.jwt.secret, options);
 };
 
 /**
@@ -32,11 +33,12 @@ export const generateAccessToken = (payload: JWTPayload): string => {
  * @returns The generated JWT refresh token
  */
 export const generateRefreshToken = (payload: JWTPayload): string => {
-  return jwt.sign(payload, config.jwt.refreshSecret, {
-    expiresIn: config.jwt.refreshExpiresIn,
+  const options: SignOptions = {
+    expiresIn: config.jwt.refreshExpiresIn as unknown as number,
     issuer: 'roomy-api',
     audience: 'roomy-client',
-  });
+  };
+  return jwt.sign(payload, config.jwt.refreshSecret, options);
 };
 
 /**

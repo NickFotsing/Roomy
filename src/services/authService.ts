@@ -60,9 +60,9 @@ export const registerUser = async (data: RegisterData): Promise<AuthResult> => {
       email: data.email,
       username: data.username,
       password: hashedPassword,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      phoneNumber: data.phoneNumber,
+      firstName: data.firstName ?? null,
+      lastName: data.lastName ?? null,
+      phoneNumber: data.phoneNumber ?? null,
     }
   });
 

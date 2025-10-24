@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
  */
 export const getUserById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { userId } = req.params;
+    const userId = req.params.userId as string;
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -53,10 +53,10 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
     const updatedUser = await prisma.user.update({
       where: { id: req.user.userId },
       data: {
-        firstName,
-        lastName,
-        phoneNumber,
-        avatarUrl,
+        firstName: firstName ?? null,
+        lastName: lastName ?? null,
+        phoneNumber: phoneNumber ?? null,
+        avatarUrl: avatarUrl ?? null,
       },
       select: {
         id: true,
@@ -142,7 +142,7 @@ export const getUserGroups = async (req: Request, res: Response): Promise<void> 
       }
     });
 
-    const groups = memberships.map(m => ({
+    const groups = memberships.map((m: any) => ({
       ...m.group,
       role: m.role,
       joinedAt: m.joinedAt,
@@ -229,8 +229,8 @@ export const getUserNotifications = async (req: Request, res: Response): Promise
 };
 
 /**
- * Mark notification as read
- * PUT /api/users/notifications/:notificationId/read
+ * Mark a specific notification as read
+ * POST /api/users/notifications/:id/read
  */
 export const markNotificationAsRead = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -239,34 +239,22 @@ export const markNotificationAsRead = async (req: Request, res: Response): Promi
       return;
     }
 
-    const { notificationId } = req.params;
+    const id = req.params.id as string;
 
-    const notification = await prisma.notification.findFirst({
-      where: {
-        id: notificationId,
-        userId: req.user.userId,
-      }
-    });
-
-    if (!notification) {
-      sendNotFound(res, 'Notification not found');
-      return;
-    }
-
-    await prisma.notification.update({
-      where: { id: notificationId },
+    const notification = await prisma.notification.update({
+      where: { id },
       data: { isRead: true }
     });
 
-    sendSuccess(res, null, 'Notification marked as read');
+    sendSuccess(res, { notification }, 'Notification marked as read');
   } catch (error) {
-    sendServerError(res, 'Failed to update notification');
+    sendServerError(res, 'Failed to mark notification as read');
   }
 };
 
 /**
  * Mark all notifications as read
- * PUT /api/users/notifications/read-all
+ * POST /api/users/notifications/read-all
  */
 export const markAllNotificationsAsRead = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -276,16 +264,13 @@ export const markAllNotificationsAsRead = async (req: Request, res: Response): P
     }
 
     await prisma.notification.updateMany({
-      where: {
-        userId: req.user.userId,
-        isRead: false,
-      },
+      where: { userId: req.user.userId, isRead: false },
       data: { isRead: true }
     });
 
     sendSuccess(res, null, 'All notifications marked as read');
   } catch (error) {
-    sendServerError(res, 'Failed to update notifications');
+    sendServerError(res, 'Failed to mark notifications as read');
   }
 };
 
