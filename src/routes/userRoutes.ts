@@ -1,5 +1,5 @@
 import { Router } from 'express';
-// Will import controllers when created
+// Will import controllers when create
 // import { registerUser, loginUser, getUser, updateUser } from '../controllers/userController';
 
 const router = Router();
