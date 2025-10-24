@@ -1,0 +1,353 @@
+// Roomy Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // Change to "sqlite" for development
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id                String   @id @default(uuid())
+  email             String   @unique
+  username          String   @unique
+  password          String
+  firstName         String?
+  lastName          String?
+  phoneNumber       String?
+  avatarUrl         String?
+  isEmailVerified   Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  wallet            Wallet?
+  groupMemberships  GroupMember[]
+  billsCreated      Bill[]
+  proposalsCreated  Proposal[]
+  votes             Vote[]
+  notifications     Notification[]
+  transactionsSent  Transaction[] @relation("SenderTransactions")
+  transactionsReceived Transaction[] @relation("ReceiverTransactions")
+
+  @@map("users")
+}
+
+// ============================================
+// WALLET MANAGEMENT (Openfort Integration)
+// ============================================
+
+model Wallet {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  openfortPlayerId  String   @unique // Openfort player ID
+  address           String   @unique // Blockchain wallet address
+  chainId           Int      @default(80002) // Polygon Amoy testnet
+  balance           Decimal  @default(0) @db.Decimal(20, 8)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("wallets")
+}
+
+// ============================================
+// GROUP MANAGEMENT
+// ============================================
+
+model Group {
+  id                String   @id @default(uuid())
+  name              String
+  description       String?
+  imageUrl          String?
+  smartAccountAddress String? @unique // Group Smart Account address
+  isActive          Boolean  @default(true)
+  votingThreshold   Int      @default(51) // Percentage needed for approval (e.g., 51%)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  members           GroupMember[]
+  bills             Bill[]
+  budgetCategories  BudgetCategory[]
+  recurringBills    RecurringBill[]
+
+  @@map("groups")
+}
+
+model GroupMember {
+  id          String   @id @default(uuid())
+  groupId     String
+  userId      String
+  role        MemberRole @default(MEMBER)
+  joinedAt    DateTime @default(now())
+  isActive    Boolean  @default(true)
+  
+  // Relations
+  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@map("group_members")
+}
+
+enum MemberRole {
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+// ============================================
+// BILLS & EXPENSES
+// ============================================
+
+model Bill {
+  id              String   @id @default(uuid())
+  groupId         String
+  createdBy       String
+  title           String
+  description     String?
+  totalAmount     Decimal  @db.Decimal(20, 8)
+  currency        String   @default("USDC")
+  dueDate         DateTime?
+  payeeAddress    String   // Address to pay to
+  categoryId      String?
+  attachmentUrl   String?
+  status          BillStatus @default(DRAFT)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  group           Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  creator         User     @relation(fields: [createdBy], references: [id])
+  category        BudgetCategory? @relation(fields: [categoryId], references: [id])
+  items           BillItem[]
+  proposal        Proposal?
+  transactions    Transaction[]
+
+  @@map("bills")
+}
+
+model BillItem {
+  id          String   @id @default(uuid())
+  billId      String
+  description String
+  amount      Decimal  @db.Decimal(20, 8)
+  quantity    Int      @default(1)
+  
+  // Relations
+  bill        Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@map("bill_items")
+}
+
+enum BillStatus {
+  DRAFT
+  PROPOSED
+  APPROVED
+  REJECTED
+  PAID
+  CANCELLED
+}
+
+// ============================================
+// PROPOSALS & VOTING
+// ============================================
+
+model Proposal {
+  id              String   @id @default(uuid())
+  billId          String   @unique
+  groupId         String
+  createdBy       String
+  title           String
+  description     String?
+  status          ProposalStatus @default(PENDING)
+  votesFor        Int      @default(0)
+  votesAgainst    Int      @default(0)
+  votesAbstain    Int      @default(0)
+  votingDeadline  DateTime
+  executedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  bill            Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
+  creator         User     @relation(fields: [createdBy], references: [id])
+  votes           Vote[]
+
+  @@map("proposals")
+}
+
+model Vote {
+  id          String   @id @default(uuid())
+  proposalId  String
+  userId      String
+  voteType    VoteType
+  comment     String?
+  votedAt     DateTime @default(now())
+  
+  // Relations
+  proposal    Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  voter       User     @relation(fields: [userId], references: [id])
+
+  @@unique([proposalId, userId])
+  @@map("votes")
+}
+
+enum ProposalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXECUTED
+  EXPIRED
+  CANCELLED
+}
+
+enum VoteType {
+  FOR
+  AGAINST
+  ABSTAIN
+}
+
+// ============================================
+// TRANSACTIONS & PAYMENTS
+// ============================================
+
+model Transaction {
+  id              String   @id @default(uuid())
+  billId          String?
+  groupId         String?
+  senderId        String?
+  receiverId      String?
+  amount          Decimal  @db.Decimal(20, 8)
+  currency        String   @default("USDC")
+  txHash          String?  @unique // Blockchain transaction hash
+  status          TransactionStatus @default(PENDING)
+  type            TransactionType
+  description     String?
+  metadata        String?  // JSON string for additional data
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  bill            Bill?    @relation(fields: [billId], references: [id])
+  sender          User?    @relation("SenderTransactions", fields: [senderId], references: [id])
+  receiver        User?    @relation("ReceiverTransactions", fields: [receiverId], references: [id])
+
+  @@map("transactions")
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum TransactionType {
+  BILL_PAYMENT
+  DEPOSIT
+  WITHDRAWAL
+  REFUND
+  TRANSFER
+}
+
+// ============================================
+// BUDGET & CATEGORIES
+// ============================================
+
+model BudgetCategory {
+  id          String   @id @default(uuid())
+  groupId     String
+  name        String
+  color       String?
+  icon        String?
+  monthlyLimit Decimal? @db.Decimal(20, 8)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  bills       Bill[]
+
+  @@map("budget_categories")
+}
+
+// ============================================
+// RECURRING BILLS
+// ============================================
+
+model RecurringBill {
+  id              String   @id @default(uuid())
+  groupId         String
+  title           String
+  description     String?
+  amount          Decimal  @db.Decimal(20, 8)
+  currency        String   @default("USDC")
+  payeeAddress    String
+  frequency       RecurringFrequency
+  startDate       DateTime
+  nextDueDate     DateTime
+  endDate         DateTime?
+  isActive        Boolean  @default(true)
+  autoPropose     Boolean  @default(true) // Auto-create proposal when due
+  categoryId      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  group           Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@map("recurring_bills")
+}
+
+enum RecurringFrequency {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String
+  type        NotificationType
+  title       String
+  message     String
+  metadata    String?  // JSON string
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+enum NotificationType {
+  BILL_PROPOSED
+  VOTE_REQUESTED
+  PROPOSAL_APPROVED
+  PROPOSAL_REJECTED
+  PAYMENT_COMPLETED
+  PAYMENT_FAILED
+  MEMBER_JOINED
+  MEMBER_LEFT
+  BUDGET_ALERT
+}
+
