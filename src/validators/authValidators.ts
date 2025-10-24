@@ -2,16 +2,37 @@ import { validatePasswordStrength } from '../utils/password.js';
 import { body } from 'express-validator';
 
 export const registerValidation = [
-  body('email').isEmail().withMessage('Invalid email address'),
-  body('password').custom(validatePasswordStrength),
-  body('firstName').optional().isString(),
-  body('lastName').optional().isString(),
-  body('username').isString().notEmpty(),
+  body('email')
+    .isEmail()
+    .withMessage('Invalid email address'),
+  body('password')
+    .custom(validatePasswordStrength),
+  body('firstName')
+    .optional()
+    .isString()
+    .withMessage('First name must be a string'),
+  body('lastName')
+    .optional()
+    .isString()
+    .withMessage('Last name must be a string'),
+  body('username')
+    .isString()
+    .withMessage('Username must be a string')
+    .notEmpty()
+    .withMessage('Username is required'),
 ];
 
 export const loginValidation = [
-  body('emailOrUsername').isString().notEmpty(),
-  body('password').isString().notEmpty(),
+  body('emailOrUsername')
+    .isString()
+    .withMessage('Email or username must be a string')
+    .notEmpty()
+    .withMessage('Email or username is required'),
+  body('password')
+    .isString()
+    .withMessage('Password must be a string')
+    .notEmpty()
+    .withMessage('Password is required'),
 ];
 
 export const refreshTokenValidation = [

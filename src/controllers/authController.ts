@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import * as authService from '../services/authService.js';
 import { sendSuccess, sendError, sendServerError } from '../utils/response.js';
+import { ensureWalletForUser } from '../services/openfortService.js';
 
 /**
  * Register a new user
@@ -219,9 +220,64 @@ export const getCurrentUser = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    sendSuccess(res, { user });
+    const wallet = await prisma.wallet.findUnique({
+      where: { userId: req.user.userId },
+      select: {
+        id: true,
+        address: true,
+        chainId: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      }
+    });
+
+    sendSuccess(res, { user, wallet });
   } catch (error) {
     sendServerError(res, 'Failed to fetch user profile');
+  }
+};
+
+export const createSession = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      sendError(res, 'Authentication required', 401);
+      return;
+    }
+
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        createdAt: true,
+        updatedAt: true,
+      }
+    });
+
+    if (!user) {
+      sendError(res, 'User not found', 404);
+      return;
+    }
+
+    // Optional: accept clientToken from Openfort Client SDK (not required in this flow)
+    // const { clientToken } = req.body;
+
+    const wallet = await ensureWalletForUser(user.id, user.email);
+
+    sendSuccess(res, { user, wallet }, 'Session created');
+  } catch (error) {
+    if (error instanceof Error) {
+      sendError(res, error.message, 400);
+    } else {
+      sendServerError(res, 'Session creation failed');
+    }
   }
 };
 

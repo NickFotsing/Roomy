@@ -37,6 +37,10 @@ export const handleValidationErrors = (
  */
 export const validate = (validations: ValidationChain[]) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    // Debug logging
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('Content-Type:', req.headers['content-type']);
+    
     // Run all validations
     await Promise.all(validations.map(validation => validation.run(req)));
     

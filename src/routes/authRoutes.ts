@@ -21,10 +21,10 @@ router.post('/forgot-password', validate(forgotPasswordValidation), authControll
 router.post('/reset-password', validate(resetPasswordValidation), authController.resetPassword);
 
 // Protected routes (require authentication)
+router.post('/session', authenticate, authController.createSession);
 router.post('/logout', authController.logout);
 router.post('/logout-all', authenticate, authController.logoutAll);
 router.post('/change-password', authenticate, validate(changePasswordValidation), authController.changePassword);
 router.get('/me', authenticate, authController.getCurrentUser);
 
 export default router;
-
