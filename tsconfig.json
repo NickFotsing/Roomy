@@ -13,7 +13,7 @@
     "types": ["node"],
     "moduleResolution": "node",
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
 
     // Other Outputs
     "sourceMap": true,
