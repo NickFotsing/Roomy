@@ -22,9 +22,9 @@ export const voteOnProposalValidation = [
   param('proposalId')
     .isUUID()
     .withMessage('Proposal ID must be a valid UUID'),
-  body('voteType')
-    .isIn(['FOR', 'AGAINST', 'ABSTAIN'])
-    .withMessage('Vote type must be FOR, AGAINST, or ABSTAIN'),
+  body('isApproved')
+    .isBoolean()
+    .withMessage('Approval status must be a boolean'),
   body('comment')
     .optional()
     .trim()

@@ -71,12 +71,15 @@ export const createTransaction = async (
       // Convert amount to wei based on currency
       const valueInWei = amountToWei(input.amount, input.currency || 'USDC');
       
+      // Resolve chainId from environment, defaulting to Arbitrum Sepolia (421614)
+      const intentChainId: number = Number(process.env.OPENFORT_CHAIN_ID || 421614);
+      
       // Create transaction intent
       const intent = await createTransactionIntent({
         playerId: wallet.openfortPlayerId,
         to: input.toAddress,
         value: valueInWei,
-        chainId: 80002, // Polygon Amoy
+        chainId: intentChainId, // Arbitrum Sepolia
         metadata: {
           ...input.metadata,
           transactionType: input.type,

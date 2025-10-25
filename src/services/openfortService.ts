@@ -6,7 +6,7 @@ import { fetch, Headers } from "undici";
 const prisma = new PrismaClient();
 
 const OPENFORT_BASE_URL = "https://api.openfort.xyz/v1";
-const DEFAULT_CHAIN_ID = Number(process.env.OPENFORT_CHAIN_ID || 42161);
+const DEFAULT_CHAIN_ID = Number(process.env.OPENFORT_CHAIN_ID || 421614);
 
 interface OpenfortPlayer {
   id: string;
@@ -175,15 +175,26 @@ function cryptoRandomHex(length: number): string {
   return out;
 }
 
+// Also update createGroupSmartAccount
 export const createGroupSmartAccount = async (groupName: string): Promise<{ address: string }> => {
   if (!hasOpenfortConfig()) {
     const addr = `0x${cryptoRandomHex(40)}`;
     return { address: addr };
   }
 
-  const player = await createPlayer();
-  const account = await createEmbeddedWallet(player.id);
-  return { address: account.address };
+  try {
+    const player = await createPlayer();
+    const account = await createEmbeddedWallet(player.id);
+    return { address: account.address };
+  } catch (err) {
+    console.error('Openfort group smart account provisioning failed:', err);
+    if (config.nodeEnv === 'development') {
+      // Fallback to local dummy smart account address in development
+      const addr = `0x${cryptoRandomHex(40)}`;
+      return { address: addr };
+    }
+    throw err;
+  }
 };
 
 export async function createTransactionIntent(
@@ -284,12 +295,10 @@ export const getAddressBalance = async (address: string): Promise<number> => {
       421614: "https://sepolia-rollup.arbitrum.io/rpc",
       42161: "https://arb1.arbitrum.io/rpc",
     };
-    
-    // Get RPC URL with guaranteed fallback to Arbitrum One
-    let rpcUrl = rpcByChain[DEFAULT_CHAIN_ID];
-    if (!rpcUrl) {
-      console.warn(`No RPC URL configured for chainId ${DEFAULT_CHAIN_ID}, falling back to Arbitrum One`);
-      rpcUrl = "https://arb1.arbitrum.io/rpc";
+
+    const rpcUrl: string = rpcByChain[DEFAULT_CHAIN_ID] ?? "https://polygon-amoy-bor-rpc.publicnode.com";
+    if (rpcUrl === "https://polygon-amoy-bor-rpc.publicnode.com" && !rpcByChain[DEFAULT_CHAIN_ID]) {
+      console.warn(`No RPC URL configured for chainId ${DEFAULT_CHAIN_ID}, falling back to Polygon Amoy (80002)`);
     }
 
     const res = await fetch(rpcUrl, {

@@ -131,9 +131,9 @@ Routes are mounted at `/api/proposals` and `/api/groups/:groupId/proposals`.
 - Access: Group membership
 - Body:
   ```json
-  { "voteType": "FOR|AGAINST|ABSTAIN", "comment": "string?" }
+  { "isApproved": true, "comment": "string?" }
   ```
-- Behavior: Prevents double voting; may auto-approve if group `votingThreshold` met.
+- Behavior: Prevents double voting; may auto-approve if group `votingThreshold` met. Maps `isApproved=true` to FOR and `false` to AGAINST.
 - Response `200`: updated proposal with tallies.
 
 ### Execute Proposal
