@@ -33,13 +33,21 @@ const config = {
   // Frontend URL
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
   
+  // Invites Configuration
+  invites: {
+    tokenSecret: process.env.INVITE_TOKEN_SECRET || 'default-invite-secret-change-in-production',
+    tokenExpiration: process.env.INVITE_TOKEN_EXPIRATION || '24h',
+  },
+  
   // Token Expiration Settings
   passwordResetExpiration: parseInt(process.env.PASSWORD_RESET_EXPIRATION || '60'), // minutes
   emailVerificationExpiration: parseInt(process.env.EMAIL_VERIFICATION_EXPIRATION || '24'), // hours
   
   // Openfort Configuration (for future wallet integration)
   openfort: {
-    apiKey: process.env.OPENFORT_API_KEY,
+    apiKey: process.env.OPENFORT_API_KEY || process.env.OPENFORT_API_SECRET_KEY || process.env.OPENFORT_API_PUBLIC_KEY,
+    secretKey: process.env.OPENFORT_API_SECRET_KEY,
+    publicKey: process.env.OPENFORT_API_PUBLIC_KEY,
     environment: process.env.OPENFORT_ENVIRONMENT || 'testnet',
   },
 };

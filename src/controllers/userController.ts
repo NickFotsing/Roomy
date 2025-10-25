@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { sendSuccess, sendError, sendServerError, sendNotFound } from '../utils/response.js';
+import { ensureWalletForUser } from '../services/openfortService.js'
 
 const prisma = new PrismaClient();
 
@@ -273,4 +274,30 @@ export const markAllNotificationsAsRead = async (req: Request, res: Response): P
     sendServerError(res, 'Failed to mark notifications as read');
   }
 };
+
+export const provisionWallet = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      sendError(res, 'Authentication required', 401);
+      return;
+    }
+
+    const userId = req.user.userId;
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true }
+    });
+
+    if (!user) {
+      sendError(res, 'User not found', 404);
+      return;
+    }
+
+    const wallet = await ensureWalletForUser(userId, user.email);
+    sendSuccess(res, { wallet }, 'Wallet provisioned successfully', 201);
+  } catch (error) {
+    console.error('Error provisioning wallet:', error);
+    sendServerError(res, 'Failed to provision wallet');
+  }
+}
 

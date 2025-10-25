@@ -32,17 +32,21 @@ export const authenticate = async (
     }
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    console.log('🔍 [AUTH DEBUG] Token received:', token.substring(0, 20) + '...');
 
     // Verify token
     const decoded = verifyAccessToken(token);
+    console.log('🔍 [AUTH DEBUG] Decoded JWT payload:', decoded);
     
     // Check if user still exists
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: { id: true, email: true, username: true, isEmailVerified: true, accountLockedUntil: true }
     });
+    console.log('🔍 [AUTH DEBUG] User lookup result:', user);
 
     if (!user) {
+      console.log('❌ [AUTH DEBUG] User not found in database for userId:', decoded.userId);
       sendUnauthorized(res, 'User not found');
       return;
     }
@@ -57,9 +61,12 @@ export const authenticate = async (
     req.user = decoded;
     next();
   } catch (error) {
+    console.log('❌ [AUTH DEBUG] Authentication error:', error);
     if (error instanceof Error) {
+      console.log('❌ [AUTH DEBUG] Error message:', error.message);
       sendUnauthorized(res, error.message);
     } else {
+      console.log('❌ [AUTH DEBUG] Unknown error type:', typeof error);
       sendUnauthorized(res, 'Authentication failed');
     }
   }

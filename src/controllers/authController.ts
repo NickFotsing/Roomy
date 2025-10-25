@@ -10,6 +10,12 @@ import { ensureWalletForUser } from '../services/openfortService.js';
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const result = await authService.registerUser(req.body);
+    // Auto-provision wallet for the new user (non-blocking)
+    try {
+      await ensureWalletForUser(result.user.id, result.user.email);
+    } catch (e) {
+      console.warn('Wallet provisioning on register failed:', e instanceof Error ? e.message : e);
+    }
     
     sendSuccess(
       res,

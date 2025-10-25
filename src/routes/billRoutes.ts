@@ -1,6 +1,22 @@
 import { Router } from 'express';
 import { authenticate, requireGroupMembership, requireGroupRole } from '../middleware/auth.js';
+import { validate } from '../middleware/validation.js';
 import { MemberRole } from '@prisma/client';
+import {
+  createBillHandler,
+  getGroupBillsHandler,
+  getBillByIdHandler,
+  updateBillHandler,
+  deleteBillHandler,
+  getUserBillsHandler
+} from '../controllers/billController.js';
+import {
+  createBillValidation,
+  updateBillValidation,
+  getBillValidation,
+  getGroupBillsValidation,
+  getUserBillsValidation
+} from '../validators/billValidators.js';
 
 const router = Router();
 
@@ -13,25 +29,21 @@ router.use(authenticate);
  * Access: Group members (groupId in body)
  * Note: Bill creation requires group membership
  */
-router.post('/', requireGroupMembership(), (req, res) => {
-  res.status(200).json({ 
-    message: 'Create bill endpoint',
-    note: 'User is a member of the specified group'
-  });
-});
+router.post('/', 
+  validate(createBillValidation),
+  requireGroupMembership(),
+  createBillHandler
+);
 
 /**
  * Get all bills for the authenticated user
  * GET /api/bills
  * Access: Authenticated users (returns bills from their groups)
  */
-router.get('/', (req, res) => {
-  res.status(200).json({ 
-    message: 'Get user bills endpoint',
-    userId: req.user?.userId,
-    note: 'Returns bills from all groups the user belongs to'
-  });
-});
+router.get('/', 
+  validate(getUserBillsValidation),
+  getUserBillsHandler
+);
 
 /**
  * Get bill by ID
@@ -39,37 +51,31 @@ router.get('/', (req, res) => {
  * Access: Members of the group that owns the bill
  * Note: In a full implementation, you'd verify group membership via the bill's groupId
  */
-router.get('/:billId', (req, res) => {
-  res.status(200).json({ 
-    message: `Get bill with ID: ${req.params.billId}`,
-    note: 'Should verify user is member of the group that owns this bill'
-  });
-});
+router.get('/:billId', 
+  validate(getBillValidation),
+  getBillByIdHandler
+);
 
 /**
  * Update bill
- * PUT /api/bills/:billId
+ * PATCH /api/bills/:billId
  * Access: Bill creator or group admins
  * Note: In full implementation, check if user is bill creator or group admin
  */
-router.put('/:billId', (req, res) => {
-  res.status(200).json({ 
-    message: `Update bill with ID: ${req.params.billId}`,
-    note: 'Should verify user is bill creator or group admin'
-  });
-});
+router.patch('/:billId', 
+  validate(updateBillValidation),
+  updateBillHandler
+);
 
 /**
  * Delete bill
  * DELETE /api/bills/:billId
  * Access: Bill creator or group admins
  */
-router.delete('/:billId', (req, res) => {
-  res.status(200).json({ 
-    message: `Delete bill with ID: ${req.params.billId}`,
-    note: 'Should verify user is bill creator or group admin'
-  });
-});
+router.delete('/:billId', 
+  validate(getBillValidation),
+  deleteBillHandler
+);
 
 /**
  * Create a proposal for a bill

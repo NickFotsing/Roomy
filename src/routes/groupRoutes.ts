@@ -1,6 +1,14 @@
 import { Router } from 'express';
 import { authenticate, requireGroupMembership, requireGroupRole } from '../middleware/auth.js';
 import { MemberRole } from '@prisma/client';
+import { validate } from '../middleware/validation.js';
+import { createGroupValidation, inviteMembersValidation, joinGroupValidation } from '../validators/groupValidators.js';
+import { createGroupHandler, inviteMembersHandler, joinGroupHandler, getGroupByIdHandler, getUserGroupsHandler } from '../controllers/groupController.js';
+import { getGroupBillsHandler } from '../controllers/billController.js';
+import { getGroupBillsValidation } from '../validators/billValidators.js';
+import { getGroupProposalsHandler } from '../controllers/proposalController.js';
+import { getGroupTransactionsHandler } from '../controllers/transactionController.js';
+import { getGroupTransactionsValidation } from '../validators/transactionValidators.js';
 
 const router = Router();
 
@@ -12,36 +20,44 @@ router.use(authenticate);
  * POST /api/groups
  * Access: Any authenticated user
  */
-router.post('/', (req, res) => {
-  res.status(200).json({ 
-    message: 'Create group endpoint',
-    note: 'Will be implemented with group controller'
-  });
-});
+router.post('/', validate(createGroupValidation), createGroupHandler);
 
 /**
  * Get all user's groups
  * GET /api/groups
  * Access: Authenticated users (returns their own groups)
  */
-router.get('/', (req, res) => {
-  res.status(200).json({ 
-    message: 'Get user groups endpoint',
-    userId: req.user?.userId
-  });
-});
+router.get('/', getUserGroupsHandler);
 
 /**
  * Get group by ID
  * GET /api/groups/:groupId
  * Access: Group members only
  */
-router.get('/:groupId', requireGroupMembership('groupId'), (req, res) => {
-  res.status(200).json({ 
-    message: `Get group with ID: ${req.params.groupId}`,
-    note: 'User is a member of this group'
-  });
-});
+router.get('/:groupId', requireGroupMembership('groupId'), getGroupByIdHandler);
+
+/**
+ * Invite members to group
+ * POST /api/groups/:groupId/invite
+ * Access: Group admins only
+ */
+router.post(
+  '/:groupId/invite',
+  requireGroupRole([MemberRole.ADMIN], 'groupId'),
+  validate(inviteMembersValidation),
+  inviteMembersHandler
+);
+
+/**
+ * Join group using invite token
+ * POST /api/groups/:groupId/join
+ * Access: Authenticated users with valid token
+ */
+router.post(
+  '/:groupId/join',
+  validate(joinGroupValidation),
+  joinGroupHandler
+);
 
 /**
  * Update group details
@@ -145,12 +161,28 @@ router.delete(
  */
 router.get(
   '/:groupId/bills',
+  validate(getGroupBillsValidation),
   requireGroupMembership('groupId'),
-  (req, res) => {
-    res.status(200).json({ 
-      message: `Get bills for group: ${req.params.groupId}`
-    });
-  }
+  getGroupBillsHandler
+);
+
+// Group transactions
+router.get(
+  '/:groupId/transactions',
+  validate(getGroupTransactionsValidation),
+  requireGroupMembership('groupId'),
+  getGroupTransactionsHandler
+);
+
+/**
+ * Get group proposals
+ * GET /api/groups/:groupId/proposals
+ * Access: Group members
+ */
+router.get(
+  '/:groupId/proposals',
+  requireGroupMembership('groupId'),
+  getGroupProposalsHandler
 );
 
 export default router;
