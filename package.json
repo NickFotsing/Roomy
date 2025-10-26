@@ -26,6 +26,7 @@
   "homepage": "https://github.com/NickFotsing/Roomy#readme",
   "dependencies": {
     "@prisma/client": "^6.18.0",
+    "@types/node": "^24.9.1",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -37,6 +38,8 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.1",
     "prisma": "^6.18.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
     "undici": "^7.16.0"
   },
   "devDependencies": {
@@ -46,9 +49,6 @@
     "@types/express": "^5.0.4",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",
-    "@types/node": "^24.9.1",
-    "nodemon": "^3.1.10",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "nodemon": "^3.1.10"
   }
 }

@@ -134,10 +134,12 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
         let liveBalance = Number(wallet.balance) || 0; // Convert Decimal to number
         let balanceSource = 'cached';
         
-        let balances: BalanceResponse = { eth: liveBalance, usdc: 0 }; // Default to legacy balance for ETH
+        // Initialize balances with cached ETH balance, but we'll fetch both tokens if cache is expired
+        let balances: BalanceResponse = { eth: liveBalance, usdc: 0 };
         
         if (now - lastUpdate > cacheExpiry) {
           try {
+            // Fetch both ETH and USDC balances live
             balances = await getAddressBalances(wallet.address);
             liveBalance = balances.eth; // Keep legacy balance field for backward compatibility
             balanceSource = 'live';
@@ -153,7 +155,21 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
             
           } catch (error) {
             console.warn('Failed to fetch live balances:', error);
+            // On error, keep the cached ETH balance but set USDC to 0 as fallback
+            balances = { eth: liveBalance, usdc: 0 };
             balanceSource = 'cached_fallback';
+          }
+        } else {
+          // Cache is still valid, but we should still try to get USDC balance if we don't have it cached
+          // For now, we'll fetch both balances to ensure consistency
+          try {
+            balances = await getAddressBalances(wallet.address);
+            liveBalance = balances.eth;
+            balanceSource = 'live';
+          } catch (error) {
+            console.warn('Failed to fetch live balances for cached wallet:', error);
+            balances = { eth: liveBalance, usdc: 0 };
+            balanceSource = 'cached';
           }
         }
 

@@ -25,12 +25,30 @@ app.use(helmet());
 // Rate limiting (apply to all requests)
 app.use(generalLimiter);
 
-// CORS configuration
+// CORS configuration - support multiple origins for development and production
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001', 
+  'https://v0-room-dao-expense-app-w3.vercel.app',
+  config.frontendUrl
+].filter(Boolean); // Remove any undefined values
+
 app.use(cors({
-  origin: config.frontendUrl,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Set-Cookie']
 }));
 
 // Logging
