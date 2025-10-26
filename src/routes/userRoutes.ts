@@ -10,13 +10,13 @@ const router = Router();
 router.use(authenticate);
 
 // User profile routes
-router.get('/profile', userController.getUserGroups); // Get current user's groups
+router.get('/profile', userController.getUserProfile); // Get current user's profile with wallet
 router.put('/profile', validate(updateProfileValidation), userController.updateProfile);
 router.delete('/account', userController.deleteAccount);
 
 // Specific routes (must come before parameterized routes)
 router.get('/groups', userController.getUserGroups); // Get user's groups
-router.get('/wallet', userController.getUserWallet); // Get user's wallet
+router.get('/wallet', userController.getUserWallet); // Get user's wallet with live balance
 router.post('/wallet/provision', userController.provisionWallet); // Provision user's wallet
 
 // Notification routes

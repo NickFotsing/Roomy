@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
+import { transactionLimiter } from '../middleware/rateLimiter.js';
 import {
   createTransactionHandler,
   getTransactionByIdHandler,
@@ -13,33 +14,15 @@ import {
 
 const router = Router();
 
-// All transaction routes require authentication
+// All transaction routes require authentication and have transaction-specific rate limiting
 router.use(authenticate);
+router.use(transactionLimiter);
 
-/**
- * Create a new transaction
- * POST /api/transactions
- */
-router.post('/', 
-  validate(createTransactionValidation),
-  createTransactionHandler
-);
+// Transaction management
+router.post('/', validate(createTransactionValidation), createTransactionHandler);
+router.get('/:transactionId', validate(getTransactionValidation), getTransactionByIdHandler);
 
-/**
- * Get transaction by ID
- * GET /api/transactions/:transactionId
- */
-router.get('/:transactionId', 
-  validate(getTransactionValidation),
-  getTransactionByIdHandler
-);
-
-/**
- * Get transaction intent status
- * GET /api/transactions/intent/:intentId/status
- */
-router.get('/intent/:intentId/status', 
-  getTransactionIntentStatusHandler
-);
+// Openfort integration endpoints
+router.get('/intent/:intentId/status', getTransactionIntentStatusHandler);
 
 export default router;

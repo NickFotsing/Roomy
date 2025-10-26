@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { sendSuccess, sendError, sendServerError, sendNotFound } from '../utils/response.js';
-import { ensureWalletForUser } from '../services/openfortService.js'
+import { ensureWalletForUser, getAddressBalance, getAddressBalances, BalanceResponse } from '../services/openfortService.js'
 
 const prisma = new PrismaClient();
 
@@ -84,6 +84,139 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
 };
 
 /**
+ * Get user profile with wallet balance
+ * GET /api/users/profile
+ */
+export const getUserProfile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      sendError(res, 'Authentication required', 401);
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        phoneNumber: true,
+        createdAt: true,
+        updatedAt: true,
+        wallet: {
+          select: {
+            id: true,
+            address: true,
+            balance: true,
+            openfortAccountId: true,
+            updatedAt: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      sendNotFound(res, 'User not found');
+      return;
+    }
+
+    let walletInfo: any = null;
+
+    try {
+      if (user.wallet) {
+        const wallet = user.wallet;
+        const now = Date.now();
+        const lastUpdate = new Date(wallet.updatedAt).getTime();
+        const cacheExpiry = 30 * 1000; // 30 seconds
+        
+        let liveBalance = Number(wallet.balance) || 0; // Convert Decimal to number
+        let balanceSource = 'cached';
+        
+        let balances: BalanceResponse = { eth: liveBalance, usdc: 0 }; // Default to legacy balance for ETH
+        
+        if (now - lastUpdate > cacheExpiry) {
+          try {
+            balances = await getAddressBalances(wallet.address);
+            liveBalance = balances.eth; // Keep legacy balance field for backward compatibility
+            balanceSource = 'live';
+            
+            // Update cached balance in background (don't await) - store ETH balance for legacy compatibility
+            prisma.wallet.update({
+              where: { id: wallet.id },
+              data: { 
+                balance: balances.eth,
+                updatedAt: new Date()
+              }
+            }).catch(err => console.warn('Failed to update cached balance:', err));
+            
+          } catch (error) {
+            console.warn('Failed to fetch live balances:', error);
+            balanceSource = 'cached_fallback';
+          }
+        }
+
+        walletInfo = {
+          address: wallet.address,
+          balance: liveBalance, // Legacy field for backward compatibility
+          balances, // New field with both ETH and USDC
+          balanceSource,
+          openfortAccountId: wallet.openfortAccountId,
+          lastSyncAt: new Date().toISOString(),
+          provisioningStatus: wallet.openfortAccountId ? 'provisioned' : 'pending'
+        };
+      } else {
+        // Auto-provision wallet if not found
+        if (req.user.userId) {
+          try {
+            const provisionedWallet = await ensureWalletForUser(req.user.userId, user.email);
+            walletInfo = {
+              address: provisionedWallet.address,
+              balance: 0, // Legacy field
+              balances: { eth: 0, usdc: 0 }, // New field with both tokens
+              balanceSource: 'live',
+              openfortAccountId: provisionedWallet.openfortAccountId,
+              lastSyncAt: new Date().toISOString(),
+              provisioningStatus: provisionedWallet.openfortAccountId ? 'provisioned' : 'pending'
+            };
+          } catch (error) {
+            console.error('Auto-provision wallet failed:', error);
+            walletInfo = {
+              provisioningStatus: 'failed',
+              error: 'Wallet provisioning failed'
+            };
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching wallet info:', error);
+      walletInfo = {
+        provisioningStatus: 'error',
+        error: 'Failed to fetch wallet information'
+      };
+    }
+
+    const profile = {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phoneNumber: user.phoneNumber,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      wallet: walletInfo
+    };
+
+    sendSuccess(res, profile, 'Profile retrieved successfully');
+  } catch (error: any) {
+    console.error('getUserProfile error:', error);
+    sendServerError(res, error?.message || 'Failed to fetch user profile');
+  }
+};
+
+/**
  * Delete user account
  * DELETE /api/users/account
  */
@@ -156,7 +289,7 @@ export const getUserGroups = async (req: Request, res: Response): Promise<void> 
 };
 
 /**
- * Get user's wallet
+ * Get user's wallet with live balance
  * GET /api/users/wallet
  */
 export const getUserWallet = async (req: Request, res: Response): Promise<void> => {
@@ -173,6 +306,8 @@ export const getUserWallet = async (req: Request, res: Response): Promise<void> 
         address: true,
         balance: true,
         chainId: true,
+        openfortPlayerId: true,
+        openfortAccountId: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
@@ -180,11 +315,69 @@ export const getUserWallet = async (req: Request, res: Response): Promise<void> 
     });
 
     if (!wallet) {
-      sendNotFound(res, 'Wallet not found');
-      return;
+      // Auto-provision wallet if not found
+      try {
+        const user = await prisma.user.findUnique({
+          where: { id: req.user.userId },
+          select: { email: true }
+        });
+
+        if (!user) {
+          sendError(res, 'User not found', 404);
+          return;
+        }
+
+        const provisionedWallet = await ensureWalletForUser(req.user.userId, user.email);
+        const liveBalance = await getAddressBalance(provisionedWallet.address);
+        
+        sendSuccess(res, { 
+          wallet: {
+            ...provisionedWallet,
+            liveBalance: liveBalance.toString(),
+            lastSyncAt: new Date().toISOString()
+          }
+        });
+        return;
+      } catch (error) {
+        console.error('Auto-provision wallet failed:', error);
+        sendNotFound(res, 'Wallet not found and auto-provision failed');
+        return;
+      }
     }
 
-    sendSuccess(res, { wallet });
+    try {
+      // Fetch live balances from blockchain
+      const balances = await getAddressBalances(wallet.address);
+      
+      // Update cached balance (store ETH balance for legacy compatibility)
+      await prisma.wallet.update({
+        where: { id: wallet.id },
+        data: { 
+          balance: balances.eth,
+          updatedAt: new Date()
+        }
+      });
+
+      sendSuccess(res, { 
+        wallet: {
+          ...wallet,
+          liveBalance: balances.eth.toString(), // Legacy field
+          balances, // New field with both ETH and USDC
+          lastSyncAt: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.warn('Failed to fetch live balances, using cached:', error);
+      sendSuccess(res, { 
+        wallet: {
+          ...wallet,
+          liveBalance: wallet.balance?.toString() || '0', // Legacy field
+          balances: { eth: Number(wallet.balance) || 0, usdc: 0 }, // Fallback balances
+          lastSyncAt: wallet.updatedAt?.toISOString(),
+          balanceWarning: 'Using cached balance - live balance unavailable'
+        }
+      });
+    }
   } catch (error) {
     sendServerError(res, 'Failed to fetch wallet');
   }
@@ -294,7 +487,21 @@ export const provisionWallet = async (req: Request, res: Response): Promise<void
     }
 
     const wallet = await ensureWalletForUser(userId, user.email);
-    sendSuccess(res, { wallet }, 'Wallet provisioned successfully', 201);
+    
+    // Fetch initial live balance
+    try {
+      const liveBalance = await getAddressBalance(wallet.address);
+      sendSuccess(res, { 
+        wallet: {
+          ...wallet,
+          liveBalance: liveBalance.toString(),
+          lastSyncAt: new Date().toISOString()
+        }
+      }, 'Wallet provisioned successfully', 201);
+    } catch (error) {
+      console.warn('Failed to fetch initial balance:', error);
+      sendSuccess(res, { wallet }, 'Wallet provisioned successfully', 201);
+    }
   } catch (error) {
     console.error('Error provisioning wallet:', error);
     sendServerError(res, 'Failed to provision wallet');

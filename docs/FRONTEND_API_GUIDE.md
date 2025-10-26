@@ -160,14 +160,42 @@ Routes are mounted at `/api/transactions` and `/api/groups/:groupId/transactions
     "currency": "USDC|ETH|MATIC?", // default USDC
     "type": "BILL_PAYMENT|DEPOSIT|WITHDRAWAL|REFUND|TRANSFER",
     "description": "string?",
-    "metadata": { "any": "json?" }
+    "metadata": { "any": "json?" },
+    "toAddress": "0x..." // optional EVM address to create Openfort intent
   }
   ```
 - Behavior:
   - If `billId` present, backend loads bill and uses its `groupId`.
   - Validates active membership; records `senderId` as the authenticated user.
+  - If `toAddress` provided, provisions wallet (if needed) and creates an Openfort transaction intent; returns intent ID within transaction metadata.
   - Stores `metadata` as a JSON string.
 - Response `201`: Transaction object.
+
+#### Examples
+- Deposit to own wallet:
+  ```bash
+  curl -X POST $BASE/api/transactions \
+    -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d '{
+      "groupId": "<group-uuid>",
+      "amount": 100,
+      "type": "DEPOSIT",
+      "description": "Top-up"
+    }'
+  ```
+- Transfer to address (creates Openfort intent):
+  ```bash
+  curl -X POST $BASE/api/transactions \
+    -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+    -d '{
+      "groupId": "<group-uuid>",
+      "amount": 5,
+      "currency": "ETH",
+      "type": "TRANSFER",
+      "toAddress": "0x0123456789abcdef0123456789abcdef01234567",
+      "description": "Send to external wallet"
+    }'
+  ```
 
 ### Get Transaction By ID
 - Method/Path: `GET /api/transactions/:transactionId`
@@ -192,6 +220,96 @@ Routes are mounted at `/api/transactions` and `/api/groups/:groupId/transactions
 
 ---
 
+## Budget Categories
+Routes are mounted at `/api/categories` and `/api/groups/:groupId/categories`.
+
+### Get Group Categories
+- Method/Path: `GET /api/groups/:groupId/categories`
+- Access: Group membership
+- Params: `groupId` UUID
+- Response `200`: Array of categories.
+
+### Create Category
+- Method/Path: `POST /api/categories`
+- Access: Group admin
+- Body:
+  ```json
+  {
+    "groupId": "uuid",
+    "name": "string",
+    "color": "#RRGGBB?",
+    "icon": "string?",
+    "monthlyLimit": 500
+  }
+  ```
+- Response `201`: Category object.
+
+### Update Category
+- Method/Path: `PATCH /api/categories/:categoryId`
+- Access: Group admin
+- Body: Any subset of fields from create, plus `isActive`.
+- Response `200`: Updated category.
+
+### Delete Category
+- Method/Path: `DELETE /api/categories/:categoryId`
+- Access: Group admin
+- Response `204`: No content.
+
+---
+
+## Recurring Bills
+Routes are mounted at `/api/recurring` and `/api/groups/:groupId/recurring`.
+
+### Get Group Recurring Schedules
+- Method/Path: `GET /api/groups/:groupId/recurring`
+- Access: Group membership
+- Params: `groupId` UUID
+- Response `200`: Array of recurring schedules.
+
+### Create Recurring Schedule
+- Method/Path: `POST /api/recurring`
+- Access: Group admin
+- Body:
+  ```json
+  {
+    "groupId": "uuid",
+    "title": "string",
+    "description": "string?",
+    "amount": 100,
+    "currency": "USDC",
+    "payeeAddress": "0x...",
+    "frequency": "MONTHLY",
+    "startDate": "2025-01-01T00:00:00Z",
+    "endDate": null,
+    "autoPropose": true,
+    "categoryId": "uuid?"
+  }
+  ```
+- Response `201`: RecurringBill object.
+
+### Update Recurring Schedule
+- Method/Path: `PATCH /api/recurring/:recurringId`
+- Access: Group admin
+- Body: Any subset of fields from create, plus `nextDueDate`, `isActive`.
+- Response `200`: Updated RecurringBill.
+
+### Delete Recurring Schedule
+- Method/Path: `DELETE /api/recurring/:recurringId`
+- Access: Group admin
+- Behavior: Soft-deactivates the schedule (`isActive=false`).
+- Response `204`: No content.
+
+### Process Due Recurring
+- Method/Path: `POST /api/recurring/process`
+- Access: Authenticated (admin ops); typically a cron triggers this.
+- Behavior: Creates bills for schedules with `nextDueDate <= now`; if `autoPropose`, also creates proposals.
+- Response `200`:
+  ```json
+  { "success": true, "data": { "processed": 3 } }
+  ```
+
+---
+
 ## Groups (selected)
 Routes impacted/added under `/api/groups`:
 - `GET /api/groups/:groupId` — group details (membership required)
@@ -200,6 +318,8 @@ Routes impacted/added under `/api/groups`:
 - `GET /api/groups/:groupId/bills` — group bills (with pagination)
 - `GET /api/groups/:groupId/proposals` — group proposals
 - `GET /api/groups/:groupId/transactions` — group transactions (with pagination)
+- `GET /api/groups/:groupId/categories` — budget categories
+- `GET /api/groups/:groupId/recurring` — recurring schedules
 
 ---
 

@@ -1,5 +1,5 @@
 import { PrismaClient, Transaction, TransactionStatus, TransactionType } from '@prisma/client';
-import { createTransactionIntent, ensureWalletForUser, amountToWei } from './openfortService.js';
+import { createTransactionIntent, ensureWalletForUser, amountToWei, generateERC20TransferData } from './openfortService.js';
 
 const prisma = new PrismaClient();
 
@@ -18,15 +18,10 @@ export interface CreateTransactionInput {
 export const createTransaction = async (
   userId: string,
   input: CreateTransactionInput
-): Promise<Transaction & { openfortIntentId: string | undefined }> => {
+): Promise<Transaction & { openfortIntentId: string | null }> => {
   // Validate required fields
   if (!input.amount || input.amount <= 0) {
     throw new Error('Amount must be a positive number');
-  }
-
-  // Validate blockchain address if provided
-  if (input.toAddress && !isValidAddress(input.toAddress)) {
-    throw new Error('Invalid blockchain address format');
   }
 
   // Resolve groupId if only billId is provided
@@ -60,38 +55,87 @@ export const createTransaction = async (
     throw new Error('User not found');
   }
 
+  // If this is a DEPOSIT and no toAddress provided, default to group's smart account address
+  if (input.type === TransactionType.DEPOSIT && !input.toAddress) {
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      select: { smartAccountAddress: true }
+    });
+    if (!group || !group.smartAccountAddress) {
+      throw new Error('Group smart account address is not set; cannot perform on-chain deposit');
+    }
+    input.toAddress = group.smartAccountAddress;
+  }
+
+  // Validate blockchain address if provided (after possible defaulting above)
+  if (input.toAddress && !isValidAddress(input.toAddress)) {
+    throw new Error('Invalid blockchain address format');
+  }
+
   let openfortIntentId: string | undefined;
 
-  // Create Openfort transaction intent if toAddress is provided
+  // Create Openfort transaction intent when we have a destination address (native or token transfer)
   if (input.toAddress) {
     try {
       // Ensure user has a wallet
       const wallet = await ensureWalletForUser(userId, user.email);
-      
-      // Convert amount to wei based on currency
-      const valueInWei = amountToWei(input.amount, input.currency || 'USDC');
-      
-      // Resolve chainId from environment, defaulting to Arbitrum Sepolia (421614)
-      const intentChainId: number = Number(process.env.OPENFORT_CHAIN_ID || 421614);
-      
+
+      // Use Sepolia testnet as configured in environment
+      const intentChainId: number = Number(process.env.OPENFORT_CHAIN_ID || 11155111);
+
+      const currency = input.currency || 'ETH';
+
+      // Decide between native transfer vs ERC-20 transfer
+      let toForIntent = input.toAddress; // destination for native transfers
+      let valueForIntent = '0';
+      let dataForIntent: string | undefined = '0x';
+
+      if (currency === 'ETH' || currency === 'MATIC') {
+        // Native token transfer: send value with empty data
+        valueForIntent = amountToWei(input.amount, currency);
+        dataForIntent = '0x';
+      } else if (currency === 'USDC') {
+        // ERC-20 transfer: allow token contract address via metadata.tokenAddress, fallback to env
+        const usdcAddressFromReq = input.metadata && typeof input.metadata === 'object'
+          ? (input.metadata as Record<string, any>).tokenAddress as string | undefined
+          : undefined;
+        const usdcAddress = usdcAddressFromReq ?? process.env.OPENFORT_USDC_CONTRACT_ADDRESS;
+        if (!usdcAddress || !isValidAddress(usdcAddress)) {
+          throw new Error('USDC deposit not configured: provide metadata.tokenAddress or set OPENFORT_USDC_CONTRACT_ADDRESS');
+        }
+        // For ERC-20, the intent "to" must be the token contract, value=0, data=encoded transfer(toAddress, amount)
+        toForIntent = usdcAddress;
+        valueForIntent = '0';
+        const amountWei = amountToWei(input.amount, 'USDC');
+        // Use the improved ERC-20 transfer data generator from openfortService
+        dataForIntent = generateERC20TransferData(input.toAddress, amountWei);
+      } else {
+        throw new Error(`Unsupported currency for on-chain deposit: ${currency}`);
+      }
+
       // Create transaction intent
       const intent = await createTransactionIntent({
-        playerId: wallet.openfortPlayerId,
-        to: input.toAddress,
-        value: valueInWei,
-        chainId: intentChainId, // Arbitrum Sepolia
+        accountId: wallet.openfortAccountId || wallet.openfortPlayerId, // Use accountId if available, fallback to playerId for compatibility
+        to: toForIntent,
+        value: valueForIntent,
+        chainId: intentChainId,
+        data: dataForIntent,
         metadata: {
           ...input.metadata,
           transactionType: input.type,
           description: input.description,
           groupId,
           billId: input.billId,
+          currency,
         },
       });
 
       openfortIntentId = intent.id;
     } catch (error) {
       console.error('Failed to create Openfort transaction intent:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
       throw new Error('Failed to create blockchain transaction intent');
     }
   }
@@ -103,7 +147,7 @@ export const createTransaction = async (
       groupId,
       receiverId: input.receiverId || null,
       amount: input.amount,
-      currency: input.currency || 'USDC',
+      currency: input.currency || 'ETH',
       status: TransactionStatus.PENDING,
       type: input.type,
       description: input.description || null,
@@ -121,7 +165,7 @@ export const createTransaction = async (
 
   return {
     ...tx,
-    openfortIntentId: openfortIntentId || undefined,
+    openfortIntentId: openfortIntentId || null,
   };
 };
 

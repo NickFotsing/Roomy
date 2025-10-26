@@ -14,7 +14,7 @@ export const createTransactionValidation = [
     .isUUID()
     .withMessage('Receiver ID must be a valid UUID'),
   body('amount')
-    .isFloat({ min: 0.01 })
+    .isFloat({ min: 0.000001 })
     .withMessage('Amount must be a positive number'),
   body('currency')
     .optional()

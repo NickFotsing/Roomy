@@ -85,6 +85,7 @@ model Wallet {
   id                String   @id @default(uuid())
   userId            String   @unique
   openfortPlayerId  String   @unique // Openfort player ID
+  openfortAccountId String?  @unique // Openfort account ID (for transaction intents)
   address           String   @unique // Blockchain wallet address
   chainId           Int      @default(80002) // Polygon Amoy testnet
   balance           Decimal  @default(0) @db.Decimal(20, 8)

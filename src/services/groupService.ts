@@ -19,6 +19,14 @@ export interface InviteMembersInput {
   emails: string[];
 }
 
+export interface UpdateGroupInput {
+  name?: string;
+  description?: string | null;
+  imageUrl?: string | null;
+  votingThreshold?: number; // 1-100
+  isActive?: boolean;
+}
+
 export const createGroup = async (
   creatorUserId: string,
   input: CreateGroupInput
@@ -34,17 +42,37 @@ export const createGroup = async (
 
   // Determine smart account address: use client-provided or auto-provision
   let smartAccountAddress: string | null = null;
-  if (input.smartAccountAddress) {
-    smartAccountAddress = input.smartAccountAddress;
-  } else {
+  let candidate: string | null = input.smartAccountAddress ?? null;
+
+  if (!candidate) {
     try {
       const sa = await createGroupSmartAccount(input.name);
-      smartAccountAddress = sa.address;
+      candidate = sa.address;
     } catch (e) {
       console.warn('Failed to provision group smart account:', e instanceof Error ? e.message : e);
-      smartAccountAddress = null;
+      candidate = null;
     }
   }
+
+  // Ensure the smart account address is unique across groups
+  if (candidate) {
+    const existingWithAddress = await prisma.group.findUnique({ where: { smartAccountAddress: candidate } });
+    if (existingWithAddress) {
+      console.warn('Provided smartAccountAddress is already in use. Generating a unique address.');
+      let attempts = 0;
+      while (attempts < 5) {
+        const sa = await createGroupSmartAccount(`${input.name}-${attempts + 1}`);
+        const dup = await prisma.group.findUnique({ where: { smartAccountAddress: sa.address } });
+        if (!dup) {
+          candidate = sa.address;
+          break;
+        }
+        attempts++;
+      }
+    }
+  }
+
+  smartAccountAddress = candidate;
 
   // Persist smart account address if available
   if (smartAccountAddress) {
@@ -211,4 +239,64 @@ export const getGroupDetails = async (
     updatedAt: group.updatedAt,
     members: members.map(m => ({ id: m.user.id, email: m.user.email, username: m.user.username, role: m.role })),
   };
+};
+
+export const updateGroup = async (
+  userId: string,
+  groupId: string,
+  data: UpdateGroupInput
+): Promise<{ id: string; name: string; description: string | null; imageUrl: string | null; votingThreshold: number; isActive: boolean; smartAccountAddress: string | null; updatedAt: Date; }> => {
+  // Require admin role
+  const membership = await prisma.groupMember.findFirst({
+    where: { groupId, userId, isActive: true },
+    select: { role: true }
+  });
+  if (!membership || membership.role !== MemberRole.ADMIN) {
+    throw new Error('Only group admins can update settings');
+  }
+
+  // Build update data object, only including defined values
+  const updateData: any = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.description !== undefined) updateData.description = data.description;
+  if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
+  if (data.votingThreshold !== undefined) updateData.votingThreshold = data.votingThreshold;
+  if (data.isActive !== undefined) updateData.isActive = data.isActive;
+
+  const updated = await prisma.group.update({
+    where: { id: groupId },
+    data: updateData,
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      imageUrl: true,
+      votingThreshold: true,
+      isActive: true,
+      smartAccountAddress: true,
+      updatedAt: true,
+    }
+  });
+
+  return updated;
+};
+
+export const deleteGroup = async (
+  userId: string,
+  groupId: string
+): Promise<void> => {
+  // Require admin role
+  const membership = await prisma.groupMember.findFirst({
+    where: { groupId, userId, isActive: true },
+    select: { role: true }
+  });
+  if (!membership || membership.role !== MemberRole.ADMIN) {
+    throw new Error('Only group admins can delete the group');
+  }
+
+  // Soft delete by marking inactive
+  await prisma.group.update({
+    where: { id: groupId },
+    data: { isActive: false }
+  });
 };

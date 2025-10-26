@@ -37,6 +37,27 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 };
 
 /**
+ * Get Openfort configuration status
+ * GET /api/auth/openfort-status
+ */
+export const getOpenfortStatus = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const config = await import('../config/config.js');
+    const hasSecretKey = !!config.default.openfort?.secretKey;
+    const chainId = process.env.OPENFORT_CHAIN_ID;
+    
+    sendSuccess(res, {
+      configured: hasSecretKey,
+      mode: hasSecretKey ? 'REAL_API' : 'MOCK_MODE',
+      chainId: chainId ? parseInt(chainId) : null,
+      chainName: chainId === '11155111' ? 'Ethereum Sepolia Testnet' : 'Unknown'
+    }, 'Openfort status retrieved');
+  } catch (error) {
+    sendServerError(res, 'Failed to get Openfort status');
+  }
+};
+
+/**
  * Login user
  * POST /api/auth/login
  */

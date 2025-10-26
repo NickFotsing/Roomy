@@ -2,8 +2,8 @@ import { Router } from 'express';
 import { authenticate, requireGroupMembership, requireGroupRole } from '../middleware/auth.js';
 import { MemberRole } from '@prisma/client';
 import { validate } from '../middleware/validation.js';
-import { createGroupValidation, inviteMembersValidation, joinGroupValidation } from '../validators/groupValidators.js';
-import { createGroupHandler, inviteMembersHandler, joinGroupHandler, getGroupByIdHandler, getUserGroupsHandler } from '../controllers/groupController.js';
+import { createGroupValidation, inviteMembersValidation, joinGroupValidation, updateGroupValidation } from '../validators/groupValidators.js';
+import { createGroupHandler, inviteMembersHandler, joinGroupHandler, getGroupByIdHandler, getUserGroupsHandler, updateGroupHandler, deleteGroupHandler, refreshGroupBalanceHandler } from '../controllers/groupController.js';
 import { getGroupBillsHandler } from '../controllers/billController.js';
 import { getGroupBillsValidation } from '../validators/billValidators.js';
 import { getGroupProposalsHandler } from '../controllers/proposalController.js';
@@ -67,12 +67,8 @@ router.post(
 router.put(
   '/:groupId',
   requireGroupRole([MemberRole.ADMIN], 'groupId'),
-  (req, res) => {
-    res.status(200).json({ 
-      message: `Update group with ID: ${req.params.groupId}`,
-      note: 'User has ADMIN role in this group'
-    });
-  }
+  validate(updateGroupValidation),
+  updateGroupHandler
 );
 
 /**
@@ -83,12 +79,7 @@ router.put(
 router.delete(
   '/:groupId',
   requireGroupRole([MemberRole.ADMIN], 'groupId'),
-  (req, res) => {
-    res.status(200).json({ 
-      message: `Delete group with ID: ${req.params.groupId}`,
-      note: 'User has ADMIN role in this group'
-    });
-  }
+  deleteGroupHandler
 );
 
 /**
@@ -183,6 +174,17 @@ router.get(
   '/:groupId/proposals',
   requireGroupMembership('groupId'),
   getGroupProposalsHandler
+);
+
+/**
+ * Refresh group balance (debug endpoint)
+ * POST /api/groups/:groupId/refresh-balance
+ * Access: Group members
+ */
+router.post(
+  '/:groupId/refresh-balance',
+  requireGroupMembership('groupId'),
+  refreshGroupBalanceHandler
 );
 
 export default router;
