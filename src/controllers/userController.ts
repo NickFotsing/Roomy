@@ -110,6 +110,7 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
             id: true,
             address: true,
             balance: true,
+            openfortPlayerId: true,
             openfortAccountId: true,
             updatedAt: true
           }
@@ -178,6 +179,7 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
           balance: liveBalance, // Legacy field for backward compatibility
           balances, // New field with both ETH and USDC
           balanceSource,
+          openfortPlayerId: wallet.openfortPlayerId,
           openfortAccountId: wallet.openfortAccountId,
           lastSyncAt: new Date().toISOString(),
           provisioningStatus: wallet.openfortAccountId ? 'provisioned' : 'pending'
@@ -192,6 +194,7 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
               balance: 0, // Legacy field
               balances: { eth: 0, usdc: 0 }, // New field with both tokens
               balanceSource: 'live',
+              openfortPlayerId: provisionedWallet.openfortPlayerId,
               openfortAccountId: provisionedWallet.openfortAccountId,
               lastSyncAt: new Date().toISOString(),
               provisioningStatus: provisionedWallet.openfortAccountId ? 'provisioned' : 'pending'

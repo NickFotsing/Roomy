@@ -254,6 +254,8 @@ export const getCurrentUser = async (req: Request, res: Response): Promise<void>
         address: true,
         chainId: true,
         isActive: true,
+        openfortPlayerId: true,
+        openfortAccountId: true,
         createdAt: true,
         updatedAt: true,
       }

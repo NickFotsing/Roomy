@@ -32,55 +32,63 @@ graph TD
 
 ## 2. Technology Description
 
-- **Frontend**: React@18 + TypeScript + Vite + TailwindCSS
-- **Backend**: Node.js + Express@4 + TypeScript + Prisma ORM
-- **Database**: PostgreSQL (Neon hosted)
-- **Blockchain**: Openfort wallet infrastructure + Ethereum Sepolia testnet
-- **Authentication**: JWT tokens with refresh mechanism
+* **Frontend**: React\@18 + TypeScript + Vite + TailwindCSS
+
+* **Backend**: Node.js + Express\@4 + TypeScript + Prisma ORM
+
+* **Database**: PostgreSQL (Neon hosted)
+
+* **Blockchain**: Openfort wallet infrastructure + Ethereum Sepolia testnet
+
+* **Authentication**: JWT tokens with refresh mechanism
 
 ## 3. Route Definitions
 
-| Route | Purpose |
-|-------|---------|
-| /api/auth/login | User authentication and JWT token generation |
-| /api/auth/register | User registration with automatic wallet provisioning |
-| /api/users/profile | User profile with integrated wallet balance |
-| /api/users/wallet | Wallet details and balance information |
-| /api/users/wallet/provision | Manual wallet provisioning endpoint |
-| /api/groups | Group management with smart account integration |
-| /api/groups/:id | Group details including smart account balance |
-| /api/transactions | Transaction creation and management |
-| /api/transactions/deposit | Deposit funds to group smart accounts |
-| /api/transactions/transfer | Transfer funds from group to recipients |
-| /api/transactions/intent/:id/status | Monitor Openfort transaction intent status |
+| Route                               | Purpose                                              |
+| ----------------------------------- | ---------------------------------------------------- |
+| /api/auth/login                     | User authentication and JWT token generation         |
+| /api/auth/register                  | User registration with automatic wallet provisioning |
+| /api/users/profile                  | User profile with integrated wallet balance          |
+| /api/users/wallet                   | Wallet details and balance information               |
+| /api/users/wallet/provision         | Manual wallet provisioning endpoint                  |
+| /api/groups                         | Group management with smart account integration      |
+| /api/groups/:id                     | Group details including smart account balance        |
+| /api/transactions                   | Transaction creation and management                  |
+| /api/transactions/deposit           | Deposit funds to group smart accounts                |
+| /api/transactions/transfer          | Transfer funds from group to recipients              |
+| /api/transactions/intent/:id/status | Monitor Openfort transaction intent status           |
 
 ## 4. API Definitions
 
 ### 4.1 Core Authentication APIs
 
 **User Registration with Wallet Provisioning**
+
 ```
 POST /api/auth/register
 ```
 
 Request:
-| Param Name | Param Type | isRequired | Description |
-|------------|------------|------------|-------------|
-| email | string | true | User email address |
-| password | string | true | User password (min 8 chars) |
-| username | string | true | Unique username |
-| firstName | string | false | User first name |
-| lastName | string | false | User last name |
+
+| Param Name | Param Type | isRequired | Description                 |
+| ---------- | ---------- | ---------- | --------------------------- |
+| email      | string     | true       | User email address          |
+| password   | string     | true       | User password (min 8 chars) |
+| username   | string     | true       | Unique username             |
+| firstName  | string     | false      | User first name             |
+| lastName   | string     | false      | User last name              |
 
 Response:
-| Param Name | Param Type | Description |
-|------------|------------|-------------|
-| success | boolean | Registration status |
-| data | object | User data with wallet info |
-| token | string | JWT access token |
-| refreshToken | string | JWT refresh token |
+
+| Param Name   | Param Type | Description                |
+| ------------ | ---------- | -------------------------- |
+| success      | boolean    | Registration status        |
+| data         | object     | User data with wallet info |
+| token        | string     | JWT access token           |
+| refreshToken | string     | JWT refresh token          |
 
 Example Response:
+
 ```json
 {
   "success": true,
@@ -104,17 +112,20 @@ Example Response:
 ### 4.2 Wallet Management APIs
 
 **Get User Wallet with Live Balance**
+
 ```
 GET /api/users/wallet
 ```
 
 Response:
-| Param Name | Param Type | Description |
-|------------|------------|-------------|
-| success | boolean | Request status |
-| data | object | Wallet information |
+
+| Param Name | Param Type | Description        |
+| ---------- | ---------- | ------------------ |
+| success    | boolean    | Request status     |
+| data       | object     | Wallet information |
 
 Example Response:
+
 ```json
 {
   "success": true,
@@ -133,37 +144,43 @@ Example Response:
 ```
 
 **Provision User Wallet**
+
 ```
 POST /api/users/wallet/provision
 ```
 
 Response:
-| Param Name | Param Type | Description |
-|------------|------------|-------------|
-| success | boolean | Provisioning status |
-| data | object | Wallet details |
+
+| Param Name | Param Type | Description         |
+| ---------- | ---------- | ------------------- |
+| success    | boolean    | Provisioning status |
+| data       | object     | Wallet details      |
 
 ### 4.3 Group Smart Account APIs
 
 **Create Group with Smart Account**
+
 ```
 POST /api/groups
 ```
 
 Request:
-| Param Name | Param Type | isRequired | Description |
-|------------|------------|------------|-------------|
-| name | string | true | Group name |
-| description | string | false | Group description |
-| smartAccountAddress | string | false | Pre-existing smart account address |
+
+| Param Name          | Param Type | isRequired | Description                        |
+| ------------------- | ---------- | ---------- | ---------------------------------- |
+| name                | string     | true       | Group name                         |
+| description         | string     | false      | Group description                  |
+| smartAccountAddress | string     | false      | Pre-existing smart account address |
 
 Response:
-| Param Name | Param Type | Description |
-|------------|------------|-------------|
-| success | boolean | Creation status |
-| data | object | Group with smart account info |
+
+| Param Name | Param Type | Description                   |
+| ---------- | ---------- | ----------------------------- |
+| success    | boolean    | Creation status               |
+| data       | object     | Group with smart account info |
 
 Example Response:
+
 ```json
 {
   "success": true,
@@ -180,6 +197,7 @@ Example Response:
 ```
 
 **Get Group Details with Balance**
+
 ```
 GET /api/groups/:id
 ```
@@ -189,25 +207,29 @@ Response includes real-time smart account balance fetched from blockchain.
 ### 4.4 Transaction APIs
 
 **Create Deposit Transaction**
+
 ```
 POST /api/transactions/deposit
 ```
 
 Request:
-| Param Name | Param Type | isRequired | Description |
-|------------|------------|------------|-------------|
-| groupId | string | true | Target group ID |
-| amount | number | true | Amount to deposit (min 0.000001) |
-| currency | string | false | Currency type (ETH/USDC, default: ETH) |
-| description | string | false | Transaction description |
+
+| Param Name  | Param Type | isRequired | Description                            |
+| ----------- | ---------- | ---------- | -------------------------------------- |
+| groupId     | string     | true       | Target group ID                        |
+| amount      | number     | true       | Amount to deposit (min 0.000001)       |
+| currency    | string     | false      | Currency type (ETH/USDC, default: ETH) |
+| description | string     | false      | Transaction description                |
 
 Response:
-| Param Name | Param Type | Description |
-|------------|------------|-------------|
-| success | boolean | Transaction creation status |
-| data | object | Transaction with Openfort intent |
+
+| Param Name | Param Type | Description                      |
+| ---------- | ---------- | -------------------------------- |
+| success    | boolean    | Transaction creation status      |
+| data       | object     | Transaction with Openfort intent |
 
 Example Response:
+
 ```json
 {
   "success": true,
@@ -227,31 +249,36 @@ Example Response:
 ```
 
 **Create Transfer Transaction**
+
 ```
 POST /api/transactions/transfer
 ```
 
 Request:
-| Param Name | Param Type | isRequired | Description |
-|------------|------------|------------|-------------|
-| groupId | string | true | Source group ID |
-| toAddress | string | true | Recipient wallet address |
-| amount | number | true | Amount to transfer |
-| currency | string | false | Currency type (ETH/USDC) |
-| description | string | false | Transfer description |
+
+| Param Name  | Param Type | isRequired | Description              |
+| ----------- | ---------- | ---------- | ------------------------ |
+| groupId     | string     | true       | Source group ID          |
+| toAddress   | string     | true       | Recipient wallet address |
+| amount      | number     | true       | Amount to transfer       |
+| currency    | string     | false      | Currency type (ETH/USDC) |
+| description | string     | false      | Transfer description     |
 
 **Monitor Transaction Intent Status**
+
 ```
 GET /api/transactions/intent/:intentId/status
 ```
 
 Response:
-| Param Name | Param Type | Description |
-|------------|------------|-------------|
-| success | boolean | Status fetch result |
-| data | object | Intent status details |
+
+| Param Name | Param Type | Description           |
+| ---------- | ---------- | --------------------- |
+| success    | boolean    | Status fetch result   |
+| data       | object     | Intent status details |
 
 Example Response:
+
 ```json
 {
   "success": true,
@@ -382,6 +409,7 @@ erDiagram
 ### 6.2 Data Definition Language
 
 **Users Table**
+
 ```sql
 -- Create users table
 CREATE TABLE users (
@@ -404,6 +432,7 @@ CREATE INDEX idx_users_username ON users(username);
 ```
 
 **Wallets Table**
+
 ```sql
 -- Create wallets table
 CREATE TABLE wallets (
@@ -426,6 +455,7 @@ CREATE INDEX idx_wallets_openfort_player_id ON wallets(openfort_player_id);
 ```
 
 **Groups Table**
+
 ```sql
 -- Create groups table
 CREATE TABLE groups (
@@ -446,6 +476,7 @@ CREATE UNIQUE INDEX idx_groups_smart_account_address ON groups(smart_account_add
 ```
 
 **Group Members Table**
+
 ```sql
 -- Create group_members table
 CREATE TABLE group_members (
@@ -463,6 +494,7 @@ CREATE INDEX idx_group_members_group_id ON group_members(group_id);
 ```
 
 **Transactions Table**
+
 ```sql
 -- Create transactions table
 CREATE TABLE transactions (
@@ -490,6 +522,7 @@ CREATE INDEX idx_transactions_created_at ON transactions(created_at DESC);
 ```
 
 **Initial Data**
+
 ```sql
 -- Insert sample data for development
 INSERT INTO users (email, username, password_hash, first_name, last_name, is_email_verified)
@@ -505,6 +538,7 @@ VALUES
 ### 7.1 Environment Configuration
 
 Required environment variables:
+
 ```bash
 # Openfort Configuration
 OPENFORT_API_PUBLIC_KEY=pk_test_9eb95c20-7fcc-5999-b70c-7da1783bfe3b
@@ -522,40 +556,60 @@ JWT_REFRESH_SECRET=your_refresh_secret_key
 ### 7.2 Openfort Service Implementation
 
 Key service functions:
-- `ensureWalletForUser()` - Provisions Openfort embedded wallets
-- `createGroupSmartAccount()` - Creates group smart accounts
-- `createTransactionIntent()` - Initiates blockchain transactions
-- `getTransactionIntent()` - Monitors transaction status
-- `getAddressBalance()` - Fetches live balance via RPC
+
+* `ensureWalletForUser()` - Provisions Openfort embedded wallets
+
+* `createGroupSmartAccount()` - Creates group smart accounts
+
+* `createTransactionIntent()` - Initiates blockchain transactions
+
+* `getTransactionIntent()` - Monitors transaction status
+
+* `getAddressBalance()` - Fetches live balance via RPC
 
 ### 7.3 Error Handling Strategy
 
-- Graceful fallback to mock data in development mode
-- Comprehensive error logging for Openfort API failures
-- Retry mechanisms for network-related failures
-- User-friendly error messages for validation failures
+* Graceful fallback to mock data in development mode
+
+* Comprehensive error logging for Openfort API failures
+
+* Retry mechanisms for network-related failures
+
+* User-friendly error messages for validation failures
 
 ### 7.4 Security Considerations
 
-- API keys stored securely in environment variables
-- No private key exposure in application code
-- Address validation for all blockchain operations
-- Amount validation with minimum thresholds
-- Rate limiting on transaction endpoints
+* API keys stored securely in environment variables
+
+* No private key exposure in application code
+
+* Address validation for all blockchain operations
+
+* Amount validation with minimum thresholds
+
+* Rate limiting on transaction endpoints
 
 ## 8. Deployment Architecture
 
 ### 8.1 Production Environment
 
-- **Backend**: Node.js application on cloud hosting (Railway/Vercel)
-- **Database**: PostgreSQL on Neon with connection pooling
-- **Frontend**: React SPA with static hosting
-- **Monitoring**: Application logs and error tracking
-- **Security**: HTTPS, CORS configuration, API rate limiting
+* **Backend**: Node.js application on cloud hosting (Railway/Vercel)
+
+* **Database**: PostgreSQL on Neon with connection pooling
+
+* **Frontend**: React SPA with static hosting
+
+* **Monitoring**: Application logs and error tracking
+
+* **Security**: HTTPS, CORS configuration, API rate limiting
 
 ### 8.2 Development Environment
 
-- Local PostgreSQL or Neon development database
-- Openfort sandbox/test environment
-- Hot reload for rapid development
-- Mock data fallbacks for offline development
+* Local PostgreSQL or Neon development database
+
+* Openfort sandbox/test environment
+
+* Hot reload for rapid development
+
+* Mock data fallbacks for offline development
+

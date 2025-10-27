@@ -1,10 +1,10 @@
 import rateLimit from 'express-rate-limit';
 import { Request, Response } from 'express';
 
-// General API rate limiter
+// General API rate limiter - Very lenient for development
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 1000, // Limit each IP to 1000 requests per windowMs (increased from 100)
   message: {
     success: false,
     error: 'Too many requests from this IP, please try again later.',
@@ -13,10 +13,10 @@ export const generalLimiter = rateLimit({
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 
-// Strict rate limiter for auth endpoints
+// Lenient rate limiter for auth endpoints - Development mode
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit each IP to 10 auth requests per windowMs
+  max: 100, // Limit each IP to 100 auth requests per windowMs (increased from 10)
   message: {
     success: false,
     error: 'Too many authentication attempts, please try again later.',
@@ -25,10 +25,10 @@ export const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Very strict rate limiter for password reset
+// Lenient rate limiter for password reset - Development mode
 export const passwordResetLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // Limit each IP to 3 password reset requests per hour
+  max: 50, // Limit each IP to 50 password reset requests per hour (increased from 3)
   message: {
     success: false,
     error: 'Too many password reset attempts, please try again later.',
@@ -37,10 +37,10 @@ export const passwordResetLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Blockchain transaction rate limiter
+// Lenient blockchain transaction rate limiter - Development mode
 export const transactionLimiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 20, // Limit each IP to 20 transaction requests per 5 minutes
+  max: 200, // Limit each IP to 200 transaction requests per 5 minutes (increased from 20)
   message: {
     success: false,
     error: 'Too many transaction requests, please try again later.',
