@@ -103,6 +103,8 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
         firstName: true,
         lastName: true,
         phoneNumber: true,
+        isEmailVerified: true,
+        is2FAEnabled: true,
         createdAt: true,
         updatedAt: true,
         wallet: {
@@ -112,7 +114,16 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
             balance: true,
             openfortPlayerId: true,
             openfortAccountId: true,
+            chainId: true,
             updatedAt: true
+          }
+        },
+        groupMemberships: {
+          where: {
+            isActive: true
+          },
+          select: {
+            id: true
           }
         }
       }
@@ -216,6 +227,13 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
       };
     }
 
+    // Get chain information
+    const chainId = user.wallet?.chainId || 11155111; // Default to Sepolia
+    const currentChain = chainId === 11155111 ? 'Sepolia' : 'Unknown';
+    
+    // Count active group memberships
+    const groupMembershipCount = user.groupMemberships.length;
+
     const profile = {
       id: user.id,
       email: user.email,
@@ -223,6 +241,11 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
       firstName: user.firstName,
       lastName: user.lastName,
       phoneNumber: user.phoneNumber,
+      isEmailVerified: user.isEmailVerified,
+      is2FAEnabled: user.is2FAEnabled,
+      currentChain,
+      currentChainId: chainId,
+      groupMembershipCount,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       wallet: walletInfo

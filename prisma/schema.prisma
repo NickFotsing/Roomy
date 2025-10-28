@@ -22,6 +22,11 @@ model User {
   phoneNumber       String?
   avatarUrl         String?
   isEmailVerified   Boolean  @default(false)
+  emailVerifiedAt   DateTime?
+  googleId          String?  @unique // For Google OAuth
+  is2FAEnabled      Boolean  @default(false)
+  totpSecret        String?  // TOTP secret for 2FA
+  backupCodes       String?  // JSON array of backup codes
   failedLoginAttempts Int    @default(0)
   accountLockedUntil DateTime?
   lastLoginAt       DateTime?
@@ -39,6 +44,7 @@ model User {
   transactionsReceived Transaction[] @relation("ReceiverTransactions")
   refreshTokens     RefreshToken[]
   passwordResetTokens PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
 
   @@map("users")
 }
@@ -75,6 +81,21 @@ model PasswordResetToken {
 
   @@index([userId])
   @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id          String   @id @default(uuid())
+  userId      String
+  token       String   @unique
+  expiresAt   DateTime
+  isUsed      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
 }
 
 // ============================================

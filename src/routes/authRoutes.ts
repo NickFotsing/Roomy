@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as authController from '../controllers/authController.js';
+import * as emailVerificationController from '../controllers/emailVerificationController.js';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validation.js';
 import { authLimiter, passwordResetLimiter } from '../middleware/rateLimiter.js';
@@ -26,5 +27,14 @@ router.get('/me', authenticate, authController.getCurrentUser);
 router.post('/logout', authenticate, authController.logout);
 router.post('/logout-all', authenticate, authController.logoutAll);
 router.post('/change-password', authenticate, validate(changePasswordValidation), authController.changePassword);
+
+// Email verification routes
+router.post('/send-verification', authenticate, emailVerificationController.sendVerificationEmail);
+router.post('/verify-email', emailVerificationController.verifyEmailToken);
+router.post('/resend-verification', authenticate, emailVerificationController.resendVerificationEmail);
+
+// Google OAuth routes
+router.get('/google', authController.googleAuth);
+router.get('/google/callback', authController.googleCallback);
 
 export default router;

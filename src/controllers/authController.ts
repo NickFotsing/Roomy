@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import * as authService from '../services/authService.js';
 import { sendSuccess, sendError, sendServerError } from '../utils/response.js';
 import { ensureWalletForUser } from '../services/openfortService.js';
+import passport from '../config/passport.js';
+import { generateTokenPair } from '../utils/jwt.js';
 
 /**
  * Register a new user
@@ -308,5 +310,55 @@ export const createSession = async (req: Request, res: Response): Promise<void> 
       sendServerError(res, 'Session creation failed');
     }
   }
+};
+
+/**
+ * Initiate Google OAuth
+ * GET /api/auth/google
+ */
+export const googleAuth = (req: Request, res: Response): void => {
+  passport.authenticate('google', {
+    scope: ['profile', 'email']
+  })(req, res);
+};
+
+/**
+ * Handle Google OAuth callback
+ * GET /api/auth/google/callback
+ */
+export const googleCallback = (req: Request, res: Response): void => {
+  passport.authenticate('google', { session: false }, async (err: any, user: any) => {
+    try {
+      if (err) {
+        console.error('Google OAuth error:', err);
+        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/error?message=oauth_error`);
+      }
+
+      if (!user) {
+        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/error?message=oauth_failed`);
+      }
+
+      // Generate JWT tokens for the user
+      const tokens = generateTokenPair({
+        userId: user.id,
+        email: user.email,
+        username: user.username
+      });
+
+      // Auto-provision wallet for Google users (non-blocking)
+      try {
+        await ensureWalletForUser(user.id, user.email);
+      } catch (e) {
+        console.warn('Wallet provisioning for Google user failed:', e instanceof Error ? e.message : e);
+      }
+
+      // Redirect to frontend with tokens
+      const redirectUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback?token=${tokens.accessToken}&refresh=${tokens.refreshToken}`;
+      res.redirect(redirectUrl);
+    } catch (error) {
+      console.error('Google callback error:', error);
+      res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/error?message=callback_error`);
+    }
+  })(req, res);
 };
 

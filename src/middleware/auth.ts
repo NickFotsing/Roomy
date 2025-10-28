@@ -14,6 +14,13 @@ declare global {
   }
 }
 
+// Override Passport's User type to match our JWTPayload
+declare global {
+  namespace Express {
+    interface User extends JWTPayload {}
+  }
+}
+
 /**
  * Middleware to authenticate requests using JWT
  */

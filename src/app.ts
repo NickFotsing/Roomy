@@ -15,7 +15,9 @@ import proposalRoutes from './routes/proposalRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
 import budgetRoutes from './routes/budgetRoutes.js';
 import recurringRoutes from './routes/recurringRoutes.js';
+import twoFactorRoutes from './routes/twoFactorRoutes.js';
 import healthRoutes from './routes/healthRoutes.js';
+import passport from './config/passport.js';
 
 const app = express();
 
@@ -59,6 +61,9 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Initialize Passport
+app.use(passport.initialize());
+
 // Health check routes (no auth required)
 app.use('/health', healthRoutes);
 
@@ -71,6 +76,7 @@ app.use('/api/proposals', proposalRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/budget', budgetRoutes);
 app.use('/api/recurring', recurringRoutes);
+app.use('/api/2fa', twoFactorRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {

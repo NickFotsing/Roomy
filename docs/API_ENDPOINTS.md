@@ -195,6 +195,75 @@ Base path: `/api/auth`
 - **Method**: `POST`
 - **URL**: `/api/auth/reset-password`
 - **Auth Required**: No
+
+**Request Body:**
+```json
+{
+  "token": "reset-token-from-email",
+  "newPassword": "newSecurePassword123"
+}
+```
+
+### Send Email Verification
+- **Method**: `POST`
+- **URL**: `/api/auth/send-verification`
+- **Auth Required**: Yes
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Verification email sent successfully"
+}
+```
+
+### Verify Email Token
+- **Method**: `POST`
+- **URL**: `/api/auth/verify-email`
+- **Auth Required**: No
+
+**Request Body:**
+```json
+{
+  "token": "verification-token-from-email"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Email verified successfully"
+}
+```
+
+### Resend Email Verification
+- **Method**: `POST`
+- **URL**: `/api/auth/resend-verification`
+- **Auth Required**: Yes
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Verification email resent successfully"
+}
+```
+
+### Google OAuth Login
+- **Method**: `GET`
+- **URL**: `/api/auth/google`
+- **Auth Required**: No
+
+**Description**: Redirects to Google OAuth consent screen. After successful authentication, redirects to `/api/auth/google/callback`.
+
+### Google OAuth Callback
+- **Method**: `GET`
+- **URL**: `/api/auth/google/callback`
+- **Auth Required**: No
+
+**Description**: Handles Google OAuth callback and redirects to frontend with JWT tokens. Email is automatically verified for Google users.
+- **Auth Required**: No
 - **Rate Limited**: Yes
 
 **Request Body:**
@@ -220,19 +289,33 @@ Base path: `/api/users`
 ```json
 {
   "success": true,
+  "message": "Profile retrieved successfully",
   "data": {
-    "user": {
-      "id": "uuid",
-      "email": "user@example.com",
-      "username": "username",
-      "firstName": "John",
-      "lastName": "Doe",
-      "phoneNumber": "+1234567890",
-      "avatarUrl": "https://..."
-    },
+    "id": "uuid",
+    "email": "user@example.com",
+    "username": "username",
+    "firstName": "John",
+    "lastName": "Doe",
+    "phoneNumber": "+1234567890",
+    "createdAt": "2025-10-26T03:27:22.877Z",
+    "updatedAt": "2025-10-27T18:36:54.789Z",
+    "isEmailVerified": true,
+    "is2FAEnabled": false,
+    "currentChain": "Sepolia",
+    "currentChainId": 11155111,
+    "groupMembershipCount": 3,
     "wallet": {
-      "address": "0x...",
-      "balance": "100.50"
+      "address": "0x046d38bdf90c76528c924c0e85334ca114e5798b",
+      "balance": 0.0508,
+      "balances": {
+        "eth": 0.0508,
+        "usdc": 0
+      },
+      "balanceSource": "live",
+      "openfortPlayerId": "player_a715cfa3-8552-4093-afcf-3ddbb8318db1",
+      "openfortAccountId": "wallet_690d0702-865f-4983-a0b2-79ef76876776",
+      "lastSyncAt": "2025-10-27T18:37:06.158Z",
+      "provisioningStatus": "provisioned"
     }
   }
 }
@@ -983,6 +1066,123 @@ Base path: `/api/recurring`
   "data": {
     "processed": 3
   }
+}
+```
+
+---
+
+## 🔐 Two-Factor Authentication (2FA) Endpoints
+
+Base path: `/api/2fa`
+**Auth Required**: Yes (all endpoints)
+
+### Setup 2FA
+- **Method**: `POST`
+- **URL**: `/api/2fa/setup`
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "2FA setup initiated. Please verify with your authenticator app.",
+  "qrCodeUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
+  "secret": "JBSWY3DPEHPK3PXP",
+  "backupCodes": [
+    "A1B2C3D4",
+    "E5F6G7H8",
+    "I9J0K1L2",
+    "M3N4O5P6",
+    "Q7R8S9T0",
+    "U1V2W3X4",
+    "Y5Z6A7B8",
+    "C9D0E1F2"
+  ]
+}
+```
+
+### Verify 2FA Setup
+- **Method**: `POST`
+- **URL**: `/api/2fa/verify-setup`
+
+**Request Body:**
+```json
+{
+  "token": "123456"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "2FA has been successfully enabled"
+}
+```
+
+### Verify 2FA Token
+- **Method**: `POST`
+- **URL**: `/api/2fa/verify`
+
+**Request Body:**
+```json
+{
+  "token": "123456"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "2FA verification successful"
+}
+```
+
+### Disable 2FA
+- **Method**: `POST`
+- **URL**: `/api/2fa/disable`
+
+**Request Body:**
+```json
+{
+  "token": "123456"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "2FA has been disabled successfully"
+}
+```
+
+### Generate New Backup Codes
+- **Method**: `POST`
+- **URL**: `/api/2fa/backup-codes`
+
+**Request Body:**
+```json
+{
+  "token": "123456"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "New backup codes generated successfully",
+  "backupCodes": [
+    "A1B2C3D4",
+    "E5F6G7H8",
+    "I9J0K1L2",
+    "M3N4O5P6",
+    "Q7R8S9T0",
+    "U1V2W3X4",
+    "Y5Z6A7B8",
+    "C9D0E1F2"
+  ]
 }
 ```
 
